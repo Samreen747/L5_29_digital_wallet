@@ -15,7 +15,7 @@ GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "sk_demo_wallet_0000")
 WALLET_PIN = os.getenv("WALLET_PIN", "4321")
 wallet = {"balance": 0.0}
 daily_limit = 1000
-transactions = []
+transactions: list[dict] = []
 
 
 def hash_pin(pin: str) -> str:
@@ -31,8 +31,12 @@ def add_money(amount: float, source: str = "UPI", log: list | None = None) -> bo
     if amount <= 0:
         return False
     wallet["balance"] += amount
-    transactions.append({"type": "credit", "amount": amount, "party": source,
-                         "time": datetime.now().isoformat()})
+    transactions.append({
+        "type": "credit",
+        "amount": amount,
+        "party": source,
+        "time": datetime.now().isoformat()
+    })
     log.append(amount)
     return True
 
@@ -52,8 +56,12 @@ def pay_merchant(merchant: str, amount: float, pin: str) -> bool:
         print("Payment to", merchant, "declined")
         return False
     wallet["balance"] -= amount
-    transactions.append({"type": "debit", "amount": amount, "party": merchant,
-                         "time": datetime.now().isoformat()})
+    transactions.append({
+        "type": "debit",
+        "amount": amount,
+        "party": merchant,
+        "time": datetime.now().isoformat()
+    })
     return True
 
 
@@ -95,8 +103,8 @@ def main() -> None:
     print("Cashback on 420:", cashback_for(420, "health"))
     print("Gateway check:", check_gateway("wrong"))
     print("Final balance: Rs.", wallet["balance"])
-    creditAmounts=[t["amount"] for t in transactions if t["type"] == "credit"]
-    print("Total credited:",sum(creditAmounts))
+    credit_amounts = [t["amount"] for t in transactions if t["type"] == "credit"]
+    print("Total credited:", sum(credit_amounts))
 
 
 if __name__ == "__main__":
