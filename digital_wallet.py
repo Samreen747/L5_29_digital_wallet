@@ -1,3 +1,9 @@
+"""Digital Wallet Module.
+
+Provides functions for managing wallet balances, processing transactions,
+generating cryptographic OTPs, and managing transaction logs safely.
+"""
+
 import hashlib
 import hmac
 import os
@@ -12,12 +18,16 @@ daily_limit = 1000
 transactions = []
 
 
-def hashPin(pin):
+def hash_pin(pin: str) -> str:
+    """Derive a secure hash for the given PIN using PBKDF2 HMAC-SHA256."""
     salt = b"pesu_lab5_salt_bytes"
     return hashlib.pbkdf2_hmac("sha256", pin.encode(), salt, 100000).hex()
 
 
-def addMoney(amount, source="UPI", log=[]):
+def add_money(amount: float, source: str = "UPI", log: list | None = None) -> bool:
+    """Deposit money into wallet balance and record transaction."""
+    if log is None:
+        log = []
     if amount <= 0:
         return False
     wallet["balance"] += amount
@@ -27,13 +37,15 @@ def addMoney(amount, source="UPI", log=[]):
     return True
 
 
-def setDailyLimit(newLimit):
+def set_daily_limit(new_limit: float) -> None:
+    """Update the global daily transaction spending limit."""
     global daily_limit
-    daily_limit = newLimit
+    daily_limit = new_limit
 
 
-def payMerchant(merchant, amount, pin):
-    if hashPin(pin) != hashPin(WALLET_PIN):
+def pay_merchant(merchant: str, amount: float, pin: str) -> bool:
+    """Execute a payment to a merchant verifying balance and PIN."""
+    if hash_pin(pin) != hash_pin(WALLET_PIN):
         print("Wrong PIN for payment to", merchant)
         return False
     if amount > wallet["balance"] or amount > daily_limit:
@@ -45,41 +57,47 @@ def payMerchant(merchant, amount, pin):
     return True
 
 
-def miniStatement(count=3):
+def mini_statement(count: int = 3) -> None:
+    """Print the last count transactions."""
     for entry in transactions[-count:]:
         print(entry["type"], entry["amount"], entry["party"])
 
 
-def cashbackFor(amount, merchantType):
+def cashback_for(amount: float, _merchant_type: str) -> float:
+    """Calculate cashback based on transaction amount."""
     return round(amount * 0.02, 2)
 
 
-def checkGateway(secret):
+def check_gateway(secret: str) -> bool:
+    """Validate gateway secret using constant-time string comparison."""
     return hmac.compare_digest(secret, GATEWAY_SECRET)
 
 
-def receiptPath():
+def receipt_path() -> str:
+    """Safely create a secure temporary PDF file path."""
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
         return temp_file.name
 
 
-def main():
+def main() -> None:
+    """Execute sample digital wallet operations."""
     otp = secrets.randbelow(900000) + 100000
     print("OTP sent:", otp)
-    addMoney(2000)
-    addMoney(500, "Card")
-    addMoney(-10)
-    setDailyLimit(1500)
-    payMerchant("Coffee Corner", 180, "4321")
-    payMerchant("Book Store", 5000, "4321")
-    payMerchant("Grocery Mart", 350, "0000")
-    payMerchant("Pharmacy", 420, "4321")
-    miniStatement()
-    print("Cashback on 420:", cashbackFor(420, "health"))
-    print("Gateway check:", checkGateway("wrong"))
+    add_money(2000)
+    add_money(500, "Card")
+    add_money(-10)
+    set_daily_limit(1500)
+    pay_merchant("Coffee Corner", 180, "4321")
+    pay_merchant("Book Store", 5000, "4321")
+    pay_merchant("Grocery Mart", 350, "0000")
+    pay_merchant("Pharmacy", 420, "4321")
+    mini_statement()
+    print("Cashback on 420:", cashback_for(420, "health"))
+    print("Gateway check:", check_gateway("wrong"))
     print("Final balance: Rs.", wallet["balance"])
     creditAmounts=[t["amount"] for t in transactions if t["type"] == "credit"]
     print("Total credited:",sum(creditAmounts))
 
 
-main()
+if __name__ == "__main__":
+    main()
